@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nu9 | 全球夥伴智慧管理系統</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;500;600;700&family=Noto+Sans+TC:wght@200;400;700&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --nu-purple: #6B4FBB;
+        --nu-light: #F8F7FF;
+        --ios-bg: #FBFBFD;
+        --glass: rgba(255, 255, 255, 0.85);
+        --nu-grad: linear-gradient(135deg, #6B4FBB 0%, #9E7BB5 100%);
+        --radius-xl: 40px;
+        --radius-md: 24px;
+        --shadow-subtle: 0 10px 40px rgba(0,0,0,0.02);
+        --shadow-glow: 0 30px 60px rgba(107, 79, 187, 0.12);
+    }
+    * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+    body { 
+        margin: 0; 
+        font-family: 'Inter', 'Noto Sans TC', sans-serif; 
+        background: var(--ios-bg); 
+        color: #1D1D1F; 
+        display: flex; 
+        min-height: 100vh; 
+        overflow-x: hidden; 
+    }
+
+    /* --- 側邊導覽列 (已修正滑動問題) --- */
+   aside {
+    width: 280px; 
+    background: var(--glass); 
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px); 
+    display: flex; 
+    flex-direction: column; 
+    padding: 40px 20px;
+    position: fixed; 
+    
+    /* 1. 修改：使用 100dvh 確保高度會隨手機網址列自動調整 */
+    height: 100dvh; 
+    
+    top: 0; /* 確保從最頂端開始 */
+    z-index: 1000; 
+    border-right: 1px solid rgba(0,0,0,0.03);
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* 💡 核心修正：開啟內部滾動 */
+    overflow-y: auto !important; 
+    
+    /* 2. 新增：防止滑動連鎖，這行最重要！它會叫瀏覽器「滑到底就停，不准動後面的主頁面」 */
+    overscroll-behavior: contain; 
+    
+    -webkit-overflow-scrolling: touch; 
+    
+    /* 3. 修改：增加更多底部留白，確保最下面的「資產」看得到 */
+    padding-bottom: 120px; 
+}
+
+    .aside-logo { 
+        font-size: 2.2rem; 
+        letter-spacing: 12px; 
+        font-weight: 200; 
+        color: var(--nu-purple); 
+        text-align: center; 
+        margin-bottom: 30px; 
+        cursor: pointer; 
+    }
+    .nav-group-label { 
+        font-size: 0.65rem; 
+        font-weight: 700; 
+        color: #bbb; 
+        margin: 15px 0 8px 15px; 
+        text-transform: uppercase; 
+        letter-spacing: 1px; 
+    }
+    .nav-item { 
+        display: flex; 
+        align-items: center; 
+        padding: 12px 18px; 
+        text-decoration: none; 
+        color: #86868b; 
+        border-radius: 18px; 
+        margin-bottom: 2px; 
+        font-weight: 500; 
+        transition: 0.3s; 
+        cursor: pointer; 
+        font-size: 0.9rem;
+    }
+    .nav-item:hover, .nav-item.active { 
+        background: white; 
+        color: var(--nu-purple); 
+        box-shadow: var(--shadow-subtle); 
+        transform: translateX(5px); 
+    }
+    .nav-icon { margin-right: 12px; font-size: 1.1rem; }
+
+    /* --- 側邊欄模擬器樣式 --- */
+    .sidebar-calc-box {
+        margin-top: 20px; 
+        padding: 20px; 
+        background: rgba(107, 79, 187, 0.05); 
+        border-radius: 25px; 
+        border: 1px solid rgba(107, 79, 187, 0.1);
+    }
+    .sidebar-calc-box h4 { 
+        font-size: 0.75rem; 
+        color: var(--nu-purple); 
+        margin: 0 0 10px 0; 
+        letter-spacing: 1px; 
+    }
+    .sidebar-calc-box input { 
+        width: 100%; 
+        padding: 10px; 
+        border-radius: 10px; 
+        border: 1px solid #ddd; 
+        margin-bottom: 8px; 
+        font-size: 0.8rem; 
+        outline: none; 
+        transition: 0.3s;
+    }
+    .sidebar-calc-box input:focus { border-color: var(--nu-purple); background: white; }
+    .btn-sidebar-calc { 
+        width: 100%; 
+        padding: 10px; 
+        background: var(--nu-purple); 
+        color: white; 
+        border: none; 
+        border-radius: 12px; 
+        font-size: 0.8rem; 
+        font-weight: 700; 
+        cursor: pointer; 
+        transition: 0.2s;
+    }
+    .btn-sidebar-calc:hover { background: #553ba1; transform: translateY(-2px); }
+    .sidebar-calc-res { 
+        margin-top: 12px; 
+        font-size: 0.75rem; 
+        color: #444; 
+        line-height: 1.6; 
+    }
+    .sidebar-calc-res b { color: var(--nu-purple); font-size: 1rem; }
+
+    /* --- 主舞台 --- */
+    .app-content { flex: 1; margin-left: 280px; display: flex; width: calc(100% - 280px); min-height: 100vh; }
+    main { flex: 1; padding: 50px 40px; min-width: 0; }
+    header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 40px; }
+    .header-title { font-size: 2.6rem; font-weight: 700; letter-spacing: -1.5px; }
+    .header-title span { color: var(--nu-purple); background: var(--nu-grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+    /* --- Grid 系統與卡片 --- */
+    .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 25px; width: 100%; }
+    .card { 
+        background: white; 
+        border-radius: var(--radius-xl); 
+        padding: 35px; 
+        box-shadow: var(--shadow-subtle); 
+        border: 1px solid rgba(0,0,0,0.01); 
+        transition: 0.5s; 
+        position: relative; 
+    }
+    .card:hover { transform: translateY(-5px); box-shadow: var(--shadow-glow); }
+    .card-label { 
+        font-size: 0.7rem; 
+        font-weight: 700; 
+        color: #86868b; 
+        text-transform: uppercase; 
+        letter-spacing: 1.5px; 
+        margin-bottom: 20px; 
+        display: block; 
+    }
+    
+    .w-12 { grid-column: span 12; }
+    .w-8 { grid-column: span 8; }
+    .w-6 { grid-column: span 6; }
+    .w-4 { grid-column: span 4; }
+
+    .hero-visual { 
+        grid-column: span 12; 
+        height: 350px; 
+        border-radius: var(--radius-xl); 
+        overflow: hidden; 
+        position: relative; 
+        margin-bottom: 10px; 
+    }
+    .hero-visual img { width: 100%; height: 100%; object-fit: cover; }
+    .hero-overlay { 
+        position: absolute; 
+        bottom: 0; 
+        left: 0; 
+        width: 100%; 
+        padding: 40px; 
+        background: linear-gradient(0deg, rgba(0,0,0,0.7) 0%, transparent 100%); 
+        color: white; 
+    }
+    .vault-card { background: var(--nu-grad); color: white; border: none; }
+    .balance-lg { font-size: 3.5rem; font-weight: 700; margin: 10px 0; letter-spacing: -2px; }
+    
+    /* 表格與 UI 列表 */
+    .nu-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    .nu-table th { text-align: left; color: #86868b; font-size: 0.75rem; padding: 15px 10px; border-bottom: 1px solid #f2f2f7; }
+    .nu-table td { padding: 18px 10px; border-bottom: 1px solid #f2f2f7; font-size: 0.9rem; }
+    .nu-input { 
+        width: 100%; 
+        padding: 15px; 
+        border-radius: 12px; 
+        border: 1px solid #eee; 
+        background: #f9f9fb; 
+        outline: none; 
+        margin-bottom: 15px; 
+        font-size: 0.9rem; 
+    }
+    .btn-action { 
+        background: var(--nu-purple); 
+        color: white; 
+        border: none; 
+        padding: 16px 30px; 
+        border-radius: 15px; 
+        font-weight: 700; 
+        cursor: pointer; 
+        width: 100%; 
+        transition: 0.3s; 
+    }
+
+    .view-pane { display: none; }
+    .view-pane.active { display: block; animation: fadeUp 0.5s ease-out; }
+    @keyframes fadeUp { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } }
+
+    /* 手機按鈕 */
+    .menu-toggle { 
+        display: none; 
+        position: fixed; 
+        top: 20px; 
+        right: 20px; 
+        z-index: 2000; 
+        background: var(--nu-purple); 
+        color: white; 
+        width: 50px; 
+        height: 50px; 
+        border-radius: 15px; 
+        align-items: center; 
+        justify-content: center; 
+        font-size: 1.5rem; 
+        cursor: pointer; 
+    }
+
+    /* 彈窗樣式 */
+    .modal-overlay { 
+        position: fixed; 
+        top:0; 
+        left:0; 
+        width:100%; 
+        height:100%; 
+        background:rgba(0,0,0,0.4); 
+        backdrop-filter:blur(30px); 
+        z-index:2000; 
+        display:none; 
+        align-items:center; 
+        justify-content:center; 
+    }
+    .modal-box { 
+        background:white; 
+        width:850px; 
+        border-radius:45px; 
+        padding:60px; 
+        box-shadow:0 60px 120px rgba(0,0,0,0.15); 
+        max-height: 85vh; 
+        overflow-y: auto; 
+        position: relative; 
+    }
+
+    @media (max-width: 768px) {
+        .menu-toggle { display: flex; }
+        
+        /* 💡 修正 1：側邊欄高度與滾動優化 */
+        aside { 
+            transform: translateX(-100%); 
+            width: 280px; 
+            height: 100dvh;               /* 使用動態高度，避開手機工具列 */
+            overflow-y: auto !important;  /* 確保內容太長時可以滑動 */
+            overscroll-behavior: contain; /* 關鍵：鎖住滾動，不影響後方主頁面 */
+            -webkit-overflow-scrolling: touch; 
+            padding-bottom: 120px !important; /* 底部留白，防止資產被遮擋 */
+        }
+        
+        aside.mobile-open { transform: translateX(0); }
+        .app-content { margin-left: 0; width: 100%; }
+        main { padding: 20px; padding-top: 80px; }
+        .grid { grid-template-columns: 1fr; }
+        .w-12, .w-8, .w-6, .w-4 { grid-column: span 12 !important; }
+        .header-title { font-size: 1.8rem; }
+        #login-screen .card { width: 90% !important; }
+        
+        /* 💡 修正 2：強化背景鎖定，徹底防止 iOS 橡皮筋滑動 */
+        body.no-scroll { 
+            overflow: hidden !important; 
+            position: fixed; 
+            width: 100%; 
+            height: 100dvh; 
+        }
+    }
+</style>
+</head>
+<body>
+
+    <div class="menu-toggle" onclick="toggleMobileMenu()">☰</div>
+
+    <div id="login-screen" style="position:fixed; top:0; left:0; width:100%; height:100%; background:var(--nu-grad); z-index:9999; display:flex; align-items:center; justify-content:center;">
+        <div class="card" style="width:380px; text-align:center; padding: 40px; border-radius: 30px; background: white;">
+            <div style="font-size: 3rem; margin-bottom: 20px;">🍇</div>
+            <h2 style="color:var(--nu-purple); margin-bottom: 30px; font-weight:700;">NU9夥伴智慧管理系統</h2>
+            <input type="text" id="user-phone" class="nu-input" placeholder="手機號碼 / Account">
+            <input type="password" id="user-pw" class="nu-input" placeholder="登入密碼 / Password">
+            <button class="btn-action" onclick="handleLogin()">驗證身分並登入</button>
+            <p style="font-size: 0.8rem; color: #888; margin-top: 20px;">忘記密碼請聯繫品牌管理員</p>
+        </div>
+    </div>
+
+    <aside>
+        <div class="aside-logo" onclick="switchTab('dashboard')">NU9</div>
+        <div class="nav-group-label">Core Operations</div>
+        <div class="nav-item active" onclick="switchTab('dashboard', this)"><span class="nav-icon">📊</span>營運儀表板</div>
+        <div class="nav-item" onclick="switchTab('procure', this)"><span class="nav-icon">📦</span>產品採購中心</div>
+        
+        <div class="sidebar-calc-box">
+            <h4>⚡️ 業績獲利模擬器</h4>
+            <input type="number" id="sc-qty" placeholder="輸入銷售副數 (1~10000)">
+            <input type="number" id="sc-team" placeholder="輸入團隊總銷 (選填)">
+            <button class="btn-sidebar-calc" onclick="sidebarCalculate()">立即執行試算</button>
+            <div id="sc-result" class="sidebar-calc-res">
+                請輸入預估業績副數
+            </div>
+        </div>
+
+        <div class="nav-group-label">Global Network</div>
+        <div class="nav-item" onclick="switchTab('partners', this)"><span class="nav-icon">👥</span>團隊組織管理</div>
+        <div class="nav-item" onclick="switchTab('learning', this)"><span class="nav-icon">🎓</span>專業教學影音</div>
+        <div class="nav-group-label">Assets & Support</div>
+        <div class="nav-item" onclick="switchTab('marketing', this)"><span class="nav-icon">🏹</span>品牌營銷支援</div>
+        <div class="nav-item" onclick="switchTab('finance', this)"><span class="nav-icon">💎</span>財務資產結算</div>
+        <div class="nav-item" onclick="switchTab('settings', this)"><span class="nav-icon">⚙️</span>系統帳號設定</div>
+        <div class="nav-item" style="color: #FF3B30; margin-top: auto;" onclick="location.reload()"><span class="nav-icon">🚪</span>安全登出系統</div>
+    </aside>
+
+    <div class="app-content">
+        <main>
+            <header>
+                <div>
+                    <div style="font-size: 0.7rem; font-weight: 700; color: #86868b; letter-spacing: 3px;">AESTHETIC INTELLIGENCE</div>
+                    <h1 class="header-title" id="page-title">您好，<span>Mars</span></h1>
+                </div>
+                <div id="live-date" style="color: #86868b; font-size: 0.85rem; text-align: right;"></div>
+            </header>
+
+            <div id="view-dashboard" class="view-pane active">
+                <div class="grid">
+                    <div class="hero-visual">
+                        <img src="https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=2000" alt="Hero">
+                        <div class="hero-overlay"><h2>主宰人生的優雅與自由</h2><p>新秘微直銷：個人 50% + 團隊疊加機制</p></div>
+                    </div>
+                    <div class="card w-8 vault-card">
+                        <div class="card-label" style="color:rgba(255,255,255,0.7)">本月預計累計獲利 (TWD)</div>
+                        <div class="balance-lg" id="dashboard-profit">$ 0.00</div>
+                        <div id="rank-badge" style="font-size: 0.9rem; background: rgba(255,255,255,0.2); display: inline-block; padding: 5px 15px; border-radius: 10px;">目前狀態：計算中...</div>
+                    </div>
+                    <div class="card w-4">
+                        <div class="card-label">個人銷售副數</div>
+                        <div style="font-size:1.8rem; font-weight:700;" id="dashboard-qty">0 <span style="font-size:0.8rem; color:#888;">副</span></div>
+                        <p id="dashboard-status" style="font-size:0.85rem; color:#666; margin-top:10px;">距離 40 副激勵目標還差 40 副</p>
+                    </div>
+                    <div class="card w-6">
+                        <div class="card-label">團隊總銷目標 (30萬)</div>
+                        <div style="font-size:1.5rem; font-weight:700;" id="team-sales-display">$ 0</div>
+                        <div style="width:100%; height:10px; background:#eee; border-radius:5px; margin-top:10px; overflow:hidden;">
+                            <div id="team-progress-bar" style="width:0%; height:100%; background:var(--nu-purple); transition:1s;"></div>
+                        </div>
+                    </div>
+                    <div class="card w-6">
+                        <div class="card-label">領袖疊加紅利</div>
+                        <div style="font-size:1.2rem; font-weight:700; color:var(--nu-purple);" id="team-bonus-status">未解鎖</div>
+                        <p style="font-size:0.8rem; color:#888;">團隊滿 30 萬自動啟動 2.5% 對分</p>
+                    </div>
+                    <div class="card w-12">
+                        <div class="card-label">近期銷售紀錄 (範例數據)</div>
+                        <table class="nu-table">
+                            <thead><tr><th>單號</th><th>產品內容</th><th>金額</th><th>狀態</th></tr></thead>
+                            <tbody>
+                                <tr><td>#OR-2603</td><td>鋼圈矽膠隱形胸罩 x 2</td><td>$7,000</td><td><span style="color:#34C759;">已入帳</span></td></tr>
+                                <tr><td>#OR-2599</td><td>鋼圈矽膠隱形胸罩 x 1</td><td>$3,500</td><td><span style="color:#34C759;">已入帳</span></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-procure" class="view-pane">
+                <div class="card w-12">
+                   <div class="card-label">智慧採購中心</div>
+                   <div style="margin-bottom: 25px; padding: 25px; border: 2px dashed var(--nu-purple); border-radius: 20px; background: rgba(107, 79, 187, 0.03);">
+                       <div style="font-weight: 700; color: var(--nu-purple); margin-bottom: 10px;">📦 同步 Shopline 訂單資料</div>
+                       <input type="file" accept=".xlsx, .xls" onchange="handleExcelUpload(event)">
+                       <div style="margin-top:20px; display:flex; gap:10px; align-items:flex-end;">
+                           <div style="flex:1;">
+                               <small style="color:#888;">手動模擬團隊總銷售額 (零售價)</small>
+                               <input type="number" id="manual-team-sales" class="nu-input" placeholder="例如: 350000" style="margin:5px 0 0;">
+                           </div>
+                           <button class="btn-action" onclick="simulateTeamDashboard()" style="margin:0; width:auto; padding:15px 30px;">更新團隊大數據</button>
+                       </div>
+                   </div>
+                   <div style="overflow-x:auto;"><table class="nu-table" id="procure-table-body"></table></div>
+                </div>
+            </div>
+
+            <div id="view-partners" class="view-pane">
+                <div class="card w-12">
+                    <div class="card-label">團隊夥伴管理 (Total: 5)</div>
+                    <div style="overflow-x:auto;"><table class="nu-table" id="partner-table-body"></table></div>
+                </div>
+            </div>
+
+            <div id="view-learning" class="view-pane">
+                <div class="grid">
+                    <div class="card w-6" onclick="openModal('影音-教穿')">
+                        <div style="height:220px; background:#000; border-radius:20px; display:flex; align-items:center; justify-content:center; color:white; font-size:3rem;">▶️</div>
+                        <div style="margin-top:15px; font-weight:700;">🎥 鋼圈矽膠專業佩戴流程</div>
+                    </div>
+                    <div class="card w-6" onclick="openModal('影音-維護')">
+                        <div style="height:220px; background:#111; border-radius:20px; display:flex; align-items:center; justify-content:center; color:var(--nu-purple); font-size:3rem;">🧼</div>
+                        <div style="margin-top:15px; font-weight:700;">🛁 產品洗滌與保養 SOP</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-marketing" class="view-pane">
+                <div class="grid">
+                    <div class="card w-6" onclick="openModal('分潤詳解')">
+                        <div class="card-label">Profit Logic</div>
+                        <div style="font-weight:700; color:var(--nu-purple); font-size:1.3rem; margin-bottom:10px;">🏹 分潤詳解：個人+團隊加碼</div>
+                        <p style="color:#666; font-size:0.9rem;">進價 $1,750，售價 $3,500。達成雙重門檻獲取領袖疊加...</p>
+                    </div>
+                    <div class="card w-6" onclick="openModal('成交話術')">
+                        <div class="card-label">Sales Scripts</div>
+                        <div style="font-weight:700; color:var(--nu-purple); font-size:1.3rem; margin-bottom:10px;">💬 高端成交：異議排除</div>
+                        <p style="color:#666; font-size:0.9rem;">針對價格、黏度穩定性、敏感肌之專業對應話術...</p>
+                    </div>
+                    <div class="card w-6" onclick="openModal('服務標準')">
+                        <div class="card-label">Operation SOP</div>
+                        <div style="font-weight:700; color:var(--nu-purple); font-size:1.3rem; margin-bottom:10px;">✨ 服務標準：五感轉化</div>
+                        <p style="color:#666; font-size:0.9rem;">從諮詢到售後精準量測的品牌黃金流程...</p>
+                    </div>
+                    <div class="card w-6" onclick="openModal('團隊規則')">
+                        <div class="card-label">Team Rule</div>
+                        <div style="font-weight:700; color:var(--nu-purple); font-size:1.3rem; margin-bottom:10px;">💎 團隊加碼對分機制</div>
+                        <p style="color:#666; font-size:0.9rem;">團隊總業績 $30 萬達成，領袖領取總進價 2.5% 紅利...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-finance" class="view-pane">
+                <div class="grid">
+                    <div class="card w-6">
+                        <div class="card-label">提領獎金至指定帳戶</div>
+                        <div style="background: #1d1d1f; color: white; border-radius: 20px; padding: 30px; height: 190px; display: flex; flex-direction: column; justify-content: space-between;">
+                            <div style="display:flex; justify-content:space-between;"><div style="width:40px; height:30px; background: linear-gradient(135deg, #d4af37, #f9e29c); border-radius: 6px;"></div><div style="font-weight:700; opacity:0.5;">VISA</div></div>
+                            <div style="font-size:1.5rem; letter-spacing:4px;">**** **** **** 8888</div>
+                            <div style="display:flex; justify-content:space-between; font-size:0.8rem; opacity:0.7;"><span>MARS LIU</span><span>08 / 2029</span></div>
+                        </div>
+                        <div style="margin-top:25px;"><input type="text" class="nu-input" placeholder="提領金額 $ 0.00"><button class="btn-action">立即撥款</button></div>
+                    </div>
+                    <div class="card w-6">
+                        <div class="card-label">資產異動歷程</div>
+                        <div style="font-size:0.9rem; line-height:3;">
+                            <div style="display:flex; justify-content:space-between; border-bottom:1px solid #f2f2f7;"><span>累積銷售毛利</span><span style="font-weight:700; color:#34C759;">+ $ 17,500</span></div>
+                            <div style="display:flex; justify-content:space-between; border-bottom:1px solid #f2f2f7;"><span>個人加碼獎勵</span><span style="font-weight:700; color:#34C759;">+ $ 3,500</span></div>
+                            <div style="display:flex; justify-content:space-between;"><span>已提領提撥</span><span style="color:#888;">- $ 5,000</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-settings" class="view-pane">
+                <div class="grid">
+                    <div class="card w-6">
+                        <div class="card-label">個人檔案管理</div>
+                        <input type="text" class="nu-input" value="Mars Liu">
+                        <small>專屬推廣連結</small>
+                        <div style="display:flex; gap:10px; margin:5px 0 15px;"><input type="text" class="nu-input" value="nu9.com.tw/p/mars888" readonly style="flex:1; background:#f5f5f7;"><button class="btn-action" style="margin:0; width:auto; padding:0 15px;" onclick="alert('已複製')">複製</button></div>
+                    </div>
+                    <div class="card w-6">
+                        <div class="card-label">社群帳號設定</div>
+                        <input type="text" class="nu-input" placeholder="📸 Instagram ID">
+                        <input type="text" class="nu-input" placeholder="💬 Line Link">
+                        <button class="btn-action">儲存設定</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div class="modal-overlay" id="globalModal" onclick="closeModal()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <h2 id="modal-title" style="color:var(--nu-purple);"></h2>
+            <div id="modal-body" style="margin-top:20px; line-height:1.8; color:#444;"></div>
+            <button class="btn-action" onclick="closeModal()" style="margin-top:30px;">返回系統</button>
+        </div>
+    </div>
+
+    <script>
+        // [1] 分潤規則定義
+        const RULES = {
+            retail: 3500,        // 零售單價
+            cost: 1750,          // 進貨成本 (5折)
+            pGoal: 40,           // 個人加碼副數
+            tGoal: 300000        // 團隊加碼門檻
+        };
+        
+        // [2] 數據庫初始化
+        let products = JSON.parse(localStorage.getItem('nu9_products')) || [
+            { name: '鋼圈矽膠隱形胸罩 (經典黑)', price: 3500, pv: 350, stock: '充足' },
+            { name: '鋼圈矽膠隱形胸罩 (膚色)', price: 3500, pv: 350, stock: '充足' }
+        ];
+        let salesQty = JSON.parse(localStorage.getItem('nu9_sales_qty')) || 0;
+        let teamAmount = JSON.parse(localStorage.getItem('nu9_team')) || 0;
+
+        // [3] 精準分潤計算函數 (100% 對齊圖片)
+        function calculateFinalProfit(qty, teamSales) {
+            // A. 基礎利潤 50%：不論等級，每副皆賺 $1,750
+            const myBaseProfit = qty * (RULES.retail - RULES.cost);
+            let bonus = 0;
+            let currentMode = "一般夥伴";
+
+            // B. 判斷模式
+            // 邏輯 2b：團隊達成 30 萬。條件：個人滿 40 副。獲利轉向團隊疊加紅利
+            if (qty >= RULES.pGoal && teamSales >= RULES.tGoal) {
+                // 圖片算式：基礎 + (團隊進價總額 * 2.5%)
+                // 假設進價為總額 50%，紅利 = teamSales * 0.5 * 0.025
+                let teamCostTotal = teamSales * 0.5;
+                bonus = teamCostTotal * 0.025; 
+                currentMode = "2b 團隊疊加模式 (2.5%)";
+            } 
+            // 邏輯 2a：僅個人達成 40 副，團隊未滿 30 萬
+            else if (qty >= RULES.pGoal) {
+                // 圖片算式：基礎 + (個人進價總額 * 5%)
+                let myCostTotal = qty * RULES.cost;
+                bonus = myCostTotal * 0.05;
+                currentMode = "2a 個人加碼模式 (5%)";
+            }
+
+            return {
+                totalProfit: myBaseProfit + bonus,
+                modeName: currentMode,
+                nextStep: qty < 40 ? 40 - qty : 0
+            };
+        }
+
+        // [4] 側邊欄模擬器執行
+        function sidebarCalculate() {
+            const qty = parseInt(document.getElementById('sc-qty').value) || 0;
+            const team = parseInt(document.getElementById('sc-team').value) || 0;
+            const resBox = document.getElementById('sc-result');
+
+            if (qty <= 0) {
+                resBox.innerText = "請輸入預估業績副數";
+                return;
+            }
+
+            const res = calculateFinalProfit(qty, team);
+            resBox.innerHTML = `模式：${res.modeName}<br>預計總獲利：<b style="color:var(--nu-purple); font-size:1.1rem;">$ ${Math.round(res.totalProfit).toLocaleString()}</b>`;
+            
+            // 同步主畫面展示
+            salesQty = qty;
+            teamAmount = team;
+            updateProfitUI();
+        }
+
+        // [5] 更新儀表板 UI
+        function updateProfitUI() {
+            const res = calculateFinalProfit(salesQty, teamAmount);
+            
+            document.getElementById('dashboard-profit').innerText = `$ ${Math.round(res.totalProfit).toLocaleString()}`;
+            document.getElementById('dashboard-qty').innerHTML = `${salesQty} <span style="font-size:0.8rem; color:#888;">副</span>`;
+            document.getElementById('rank-badge').innerText = `目前狀態：${res.modeName}`;
+            
+            if (res.nextStep > 0) {
+                document.getElementById('dashboard-status').innerText = `距離 40 副目標還差 ${res.nextStep} 副`;
+            } else {
+                document.getElementById('dashboard-status').innerText = "🎉 已達成月度激勵目標！";
+            }
+
+            // 更新團隊條
+            document.getElementById('team-sales-display').innerText = `$ ${teamAmount.toLocaleString()}`;
+            let progress = (teamAmount / RULES.tGoal) * 100;
+            document.getElementById('team-progress-bar').style.width = Math.min(progress, 100) + "%";
+
+            if (teamAmount >= RULES.tGoal && salesQty >= RULES.pGoal) {
+                document.getElementById('team-bonus-status').innerText = "✅ 已啟動 (2.5% 對分)";
+                document.getElementById('team-bonus-status').style.color = "#34C759";
+            } else {
+                document.getElementById('team-bonus-status').innerText = "未解鎖";
+                document.getElementById('team-bonus-status').style.color = "#86868b";
+            }
+        }
+
+        // [6] 數據模擬
+        function simulateTeamDashboard() {
+            let val = document.getElementById('manual-team-sales').value;
+            teamAmount = parseInt(val) || 0;
+            localStorage.setItem('nu9_team', teamAmount);
+            updateProfitUI();
+            alert("團隊數據更新成功！");
+        }
+
+        // [7] Excel 匯入
+        function handleExcelUpload(event) {
+            const file = event.target.files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+                const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+                salesQty = jsonData.length;
+                localStorage.setItem('nu9_sales_qty', salesQty);
+                updateProfitUI();
+                alert(`匯入成功！目前銷量 ${salesQty} 副`);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // [8] 分頁與導覽
+        function switchTab(id, btn) {
+            document.querySelectorAll('.view-pane').forEach(v => v.classList.remove('active'));
+            document.getElementById('view-' + id).classList.add('active');
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            if(btn) btn.classList.add('active');
+            document.getElementById('page-title').innerHTML = id.toUpperCase() + ' | <span>Mars</span>';
+            if (window.innerWidth <= 768 && document.querySelector('aside').classList.contains('mobile-open')) toggleMobileMenu();
+            if (id === 'partners') renderPartners();
+        }
+
+     function toggleMobileMenu() {
+            const aside = document.querySelector('aside');
+            const menuToggle = document.querySelector('.menu-toggle');
+            const body = document.body;
+
+            // 切換選單狀態
+            aside.classList.toggle('mobile-open');
+            
+            // 根據選單是否打開，決定是否鎖定背景
+            if (aside.classList.contains('mobile-open')) {
+                menuToggle.innerText = '✕';
+                body.classList.add('no-scroll');    // 開啟選單 -> 鎖定背景
+            } else {
+                menuToggle.innerText = '☰';
+                body.classList.remove('no-scroll'); // 關閉選單 -> 解鎖背景
+            }
+        }
+
+        function renderPartners() {
+            const pt = [{ id: 1001, name: '李曉明', rank: '領袖', pv: '150,000' }, { id: 1002, name: '陳大華', rank: '夥伴', pv: '80,000' }];
+            const body = document.getElementById('partner-table-body');
+            body.innerHTML = '<thead><tr><th>編號</th><th>姓名</th><th>職級</th><th>PV</th></tr></thead>' + 
+                pt.map(p => `<tr><td>#${p.id}</td><td>${p.name}</td><td>${p.rank}</td><td>${p.pv}</td></tr>`).join('');
+        }
+
+        // [9] 登入與初始化
+        function handleLogin() {
+            const phone = document.getElementById('user-phone').value;
+            if (phone.length >= 8) {
+                document.getElementById('login-screen').style.display = 'none';
+                updateProfitUI();
+            } else { alert('請輸入手機號碼'); }
+        }
+
+        const db = {
+            '分潤詳解': '<h3>💰 三層疊加獎勵</h3><p>零售價 $3,500 / 進價 $1,750</p><p><b>1. 一般：</b>利潤 50% ($1,750)。</p><p><b>2. 2a 個人目標：</b>月銷 40 副，加領進價之 5%。</p><p><b>3. 2b 團隊目標：</b>團隊滿 30 萬且個人達標，領取總量進價之 2.5% 對分分紅！</p>',
+            '成交話術': '<h3>💬 高端銷售應對</h3><p>針對高端新秘之過敏、黏度穩定性、價格等異議排除流程...</p>',
+            '團隊規則': '<h3>💎 領袖對分機制</h3><p>團隊達成 30 萬，公司發放總進價 5% 紅利，領袖與核心業務對分 (2.5%)。</p>'
+        };
+
+        function openModal(title) {
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-body').innerHTML = db[title] || "資料同步中...";
+            document.getElementById('globalModal').style.display = 'flex';
+        }
+        function closeModal() { document.getElementById('globalModal').style.display = 'none'; }
+
+        window.onload = function() {
+            document.getElementById('live-date').innerText = new Date().toLocaleDateString('zh-TW', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            updateProfitUI();
+        };
+    </script>
+</body>
+</html>
