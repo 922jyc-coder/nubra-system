@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nu9 | 全球夥伴智慧管理系統 v2</title>
+    <title>Nu9 | 全球夥伴智慧管理系統</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;500;600;700&family=Noto+Sans+TC:wght@200;400;700&display=swap" rel="stylesheet">
@@ -513,7 +513,7 @@
 const SUPABASE_URL = "https://jfkzkpdysynlrsbgorqw.supabase.co";
 const SUPABASE_KEY = "sb_publishable_ggwa23fWo8A6WeDSDRf1xw_ofQ3Gsh_";
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         // [1] 分潤規則定義
         const RULES = {
             retail: 3500,        // 零售單價
@@ -671,19 +671,23 @@ const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         // [9] 登入與初始化
 async function handleLogin() {
-    const email = document.getElementById('user-phone').value;
-    const password = document.getElementById('user-pw').value;
+    try {
+        const email = document.getElementById('user-phone').value;
+        const password = document.getElementById('user-pw').value;
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-        email: email,
-        password: password
-    });
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
+            email: email,
+            password: password
+        });
 
-    if (error) {
-        alert("登入失敗：" + error.message);
-    } else {
-        alert("登入成功！");
-        document.getElementById('login-screen').style.display = 'none';
+        if (error) {
+            alert("登入失敗：" + error.message);
+        } else {
+            alert("登入成功！");
+            document.getElementById('login-screen').style.display = 'none';
+        }
+    } catch (err) {
+        alert("發生錯誤：" + err.message);
     }
 }
 
